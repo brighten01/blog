@@ -198,25 +198,23 @@ module.exports = function (app) {
     app.get("/u/:name/:title",function (req,res){
         var name = req.params.name;
         var title =req.params.title;
-        var newUser= new User(req.session.user);
-         var  newPost = new Post();
-        newUser.get(name,function (error,user){
+
+        User.get(name,function (error,user){
             if(!user){
                 req.flash("error","无此用户");
                 return res.render("/");
             }
-            newPost.getOne({
-                name:name,
-                title:title
-            },function (error,post){
+            Post.getOne(name,title ,function (error,post){
                 if(error){
                     req.flash("error","错误");
                     return res.render('/');
                 }
-
+                    
                 res.render("article",
                     {
-                        title:post.title,
+                        title:title,
+                        name:name,
+                        user: req.session.user,
                         success:req.flash("success").toString(),
                         error:req.flash("error").toString(),
                         post:post
