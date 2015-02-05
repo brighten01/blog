@@ -1,11 +1,10 @@
 var mongodb = require("./db");
 
 function User(user){
-    this.name = user.name;
-    this.email = user.email;
-    this.password= user.password;
+        this.name = user.name;
+        this.email = user.email;
+        this.password= user.password;
 }
-module.exports = User;
 
 /**
  * 保存用户信息
@@ -49,10 +48,10 @@ User.prototype.save =function (callback){
 User.prototype.get =function (name,callback){
 
     mongodb.open(function (err,db){
-        if(err){
+        if(err) {
             return callback(err);
         }
-
+        
         db.collection("users",function (err,collection){
             if(err){
                 mongodb.close();
@@ -66,6 +65,9 @@ User.prototype.get =function (name,callback){
             });
         })
     });
-}
+};
+//原来为  module.exports = User;
+
+module.exports = new User({name:"test",email:"test@test.com",password:"password"});
 
 

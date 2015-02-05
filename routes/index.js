@@ -4,13 +4,20 @@
  */
 var crypto = require("crypto");
 var User = require("../models/user.js");
-var  Post = require("../models/post.js");
+var Post = require("../models/post.js");
 
+//如果你使用prototype 扩展了应用并且 此例中的所有对象都需要接受参数请初始化对应的参数
+//User = new User({
+//    name:"test",
+//    email:"test@test.com",
+//    passwor:"test@test.com"
+//});
+//Post = new Post("test","test","test");
+// 如果只是第一个使用protype扩展，那么不需要初始化参数直接使用可以将上述注销掉
 module.exports = function (app) {
     //默认主页路由
     app.get("/", function (req, res) {
-        var newPost = new Post();
-        newPost.get(null, function (error, posts) {
+        Post.get(null, function (error, posts) {
             if (error) {
                 posts = [];
             }
@@ -157,6 +164,68 @@ module.exports = function (app) {
     });
 
 
+    /**
+     * 获取用户发布的文章
+     */
+    app.get("/u/:name",function (req,res){
+        var name = req.params.name;
+        User.get(name,function (error,user){
+            if(!user){
+                req.flash("error","此用户不存在");
+                return res.redirect("/");
+            }
+
+            Post.getAll(name,function (error,docs){
+                if(error){
+                    req.flash("error","未知错误"+error);
+                    res.redirect("/");
+                }
+                res.render("index",
+                    {
+                        user:"test",
+                        title: "我发布的文章",
+                        success: req.flash("success").toString(),
+                        posts:docs,
+                        error:req.flash("error").toString()
+                    });
+            });
+        });
+    });
+
+    /**
+     * 查找文章 根据作者和文章标题
+     */
+    app.get("/u/:name/:title",function (req,res){
+        var name = req.params.name;
+        var title =req.params.title;
+        var newUser= new User(req.session.user);
+         var  newPost = new Post();
+        newUser.get(name,function (error,user){
+            if(!user){
+                req.flash("error","无此用户");
+                return res.render("/");
+            }
+            newPost.getOne({
+                name:name,
+                title:title
+            },function (error,post){
+                if(error){
+                    req.flash("error","错误");
+                    return res.render('/');
+                }
+
+                res.render("article",
+                    {
+                        title:post.title,
+                        success:req.flash("success").toString(),
+                        error:req.flash("error").toString(),
+                        post:post
+
+                    }
+                );
+            })
+        });
+    });
     /**
      *  验证用户登录
      * @param req 请求
