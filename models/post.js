@@ -1,8 +1,10 @@
 var mongodb = require("./db");
-function Post(name, title, content) {
+var markdown = require("markdown").markdown;
+function Post(name, title, content,tags) {
     this.name = name;
     this.title = title;
     this.content = content;
+    this.tags = tags;
 }
 
 Post.prototype.save = function (callback) {
@@ -11,7 +13,9 @@ Post.prototype.save = function (callback) {
         name: this.name,
         title: this.title,
         content: this.content,
-        time: new Date().getTime()
+        time: new Date().getTime(),
+        tags : this.tags,
+        comments:[]
     };
     //
     mongodb.close();
@@ -82,13 +86,23 @@ Post.prototype.getOne = function (name, title, callback) {
                     if (error) {
                         callback(error);
                     }
+                    //doc.content = markdown.toHTML(comment.content);
+                    if(doc){
+                        doc.comments.forEach(function (comment){
+                            comment.content = markdown.toHTML(comment.content);
+                        });
+                    }
                     callback(null, doc);
                 })
         });
     });
 };
 
-
+/**
+ *
+ * @param name 获取所有
+ * @param callback 回调函数
+ */
 Post.prototype.getAll = function (name, callback) {
     var date = new Date();
     mongodb.close();
@@ -145,7 +159,7 @@ Post.prototype.edit = function (name, title, callback) {
  * @param content  内 容
  * @param callback 回调函数
  */
-Post.prototype.update = function (title, content, callback) {
+Post.prototype.update = function (name ,title, content, callback) {
     mongodb.close();
     mongodb.open(function (error, db) {
         if (error) {
@@ -157,11 +171,11 @@ Post.prototype.update = function (title, content, callback) {
                 mongodb.close();
                 callback(error);
             }
-            collection.update({
-                "title": title,
-                "content": content,
-                "time": new Date().getTime()
-            }, {$set: {post: content}}, function (error) {
+            collection.update(
+            {
+                 "name":name,
+                 "title": title
+            }, {$set: {"content": content,"title":title}}, function (error) {
                 if (error) {
                    return  callback(error);
                 }
@@ -199,5 +213,28 @@ Post.prototype.remove=function (name,title,callback){
             });
         });
     });
+};
+/**
+ * 增加标签查找功能
+ * @param tags  标签的名称目前只支持一个
+ * @param callback  回调函数
+ */
+Post.prototype.getTag = function (tags,callback){
+    mongodb.close();
+    mongodb.open(function(error,db){
+        if(error){
+            mongodb.close();
+            return callback(error);
+        }
+        db.collection("posts",function (error,collection){
+            collection.find({tags:tags}).sort({time:-1}).toArray(function (error,docs){
+                if(error){
+                    callback(error);
+                }
+                callback(null,docs);
+            });
+        });
+    });
+
 }
 module.exports = new Post("test", "tset", "test");

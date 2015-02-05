@@ -5,7 +5,7 @@
 var crypto = require("crypto");
 var User = require("../models/user.js");
 var Post = require("../models/post.js");
-
+var Comment = require("../models/comment.js");
 //如果你使用prototype 扩展了应用并且 此例中的所有对象都需要接受参数请初始化对应的参数
 //User = new User({
 //    name:"test",
@@ -154,6 +154,7 @@ module.exports = function (app) {
         Post.name = name;
         Post.title = title;
         Post.content = content;
+        Post.tags = req.body.tags;
         Post.save(function (error) {
             if (error) {
                 req.flash("error", "未知错误" + error);
@@ -167,7 +168,7 @@ module.exports = function (app) {
     /**
      * 获取用户发布的文章
      */
-    app.get("/u/:name",checkLogin);
+    app.get("/u/:name", checkLogin);
     app.get("/u/:name", function (req, res) {
         var name = req.params.name;
         User.get(name, function (error, user) {
@@ -226,29 +227,53 @@ module.exports = function (app) {
         });
     });
 
+
     //验证登录
-    app.get("/edit/:name/:title",checkLogin);
-    app.get("/edit/:name/:title",function (req,res){
-        var name = req.params.name;
-        var title = req.params.title;
-        User.get(name,function (error ,user){
-            if(!user){
-                req.flash("error","此用户不存在");
+    app.post("/u/:name/:title",checkLogin);
+    app.post("/u/:name/:title" ,function (req,res){
+
+        var comment = {
+            name:req.body.name,
+            title:req.body.title,
+            website : req.body.website,
+            time:new Date().getTime(),
+            content: req.body.content
+        };
+
+        var newComment = new Comment(req.params.name,req.params.title,comment);
+        newComment.save(function (error){
+            if(error){
+                req.flash("error","出现错误"+error);
                 return res.redirect("/");
             }
 
-            Post.edit(name,title ,function (error,doc){
-                if(error){
-                    req.flash("error","未知错误");
+            req.flash("success","发表评论成功");
+            res.redirect('back');
+        });
+    });
+    //验证登录
+    app.get("/edit/:name/:title", checkLogin);
+    app.get("/edit/:name/:title", function (req, res) {
+        var name = req.params.name;
+        var title = req.params.title;
+        User.get(name, function (error, user) {
+            if (!user) {
+                req.flash("error", "此用户不存在");
+                return res.redirect("/");
+            }
+
+            Post.edit(name, title, function (error, doc) {
+                if (error) {
+                    req.flash("error", "未知错误");
                     return res.redirect("/");
                 }
                 res.render("edit",
                     {
-                        title:"编辑博客",
-                        post:doc,
-                        user:req.session.user,
-                        success:req.flash("success").toString(),
-                        error:req.flash("error").toString()
+                        title: "编辑博客",
+                        post: doc,
+                        user: req.session.user,
+                        success: req.flash("success").toString(),
+                        error: req.flash("error").toString()
                     }
                 );
             });
@@ -258,35 +283,68 @@ module.exports = function (app) {
     /**
      *修改页面
      */
-    app.post("/edit/:name/:title",checkLogin);
-    app.post("/edit/:name/:title",function (req,res){
+    app.post("/edit/:name/:title", checkLogin);
+    app.post("/edit/:name/:title", function (req, res) {
         var title = req.body.title;
         var content = req.body.content;
-        console.log("标题"+title);
-        Post.update(title , content , function (error){
+        var name = req.params.name;
+        var comment_title = req.body.title;
+        var comment_content = req.body.comment;
+        var currentUser = req.session.user;
+        var comment_name = currentUser.name;
+        var newComment = new Comment(comment_name,comment_title,comment_content);
+        newComment.save(function (error){
             if(error){
-                req.flash("修改文章发生错误"+error);
+                req.flash("发布评论失败");
                 return res.redirect("/");
             }
-            req.flash("success","修改成功");
+            req.flash("success","发布评论成功");
+            res.redirect("/");
+        });
+        Post.update(name, title, content, function (error) {
+            if (error) {
+                req.flash("修改文章发生错误" + error);
+                return res.redirect("/");
+            }
+            req.flash("success", "修改成功");
             return res.redirect("/");
         });
 
     });
 
     //验证登录
-    app.get("/delete/:name/:title",checkLogin);
-    app.get("/delete/:name/:title",function (req,res){
+    app.get("/delete/:name/:title", checkLogin);
+    app.get("/delete/:name/:title", function (req, res) {
         var name = req.params.name;
         var title = req.params.title;
-        Post.remove(name,title,function (error){
-            if(error){
-                req.flash("error","删除错误");
+        Post.remove(name, title, function (error) {
+            if (error) {
+                req.flash("error", "删除错误");
                 return res.redirect("/");
             }
-            req.flash("success","删除成功");
+            req.flash("success", "删除成功");
             res.redirect("/");
         });
+    });
+
+    app.get("/tags/:tags",function (req,res){
+        var tags  = req.params.tags;
+        Post.getTag(tags,function (error,docs){
+            if(error){
+                req.flash("error","发生错误");
+                res.redirect("/");
+            }
+
+            res.render("list",
+                {
+                    user:req.session.user,
+                    title:"标签查找",
+                    success:req.flash("success").toString(),
+                    error:req.flash("error").toString(),
+                    posts:docs
+                });
+        });
+
     });
     /**
      *  验证用户登录

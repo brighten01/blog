@@ -9,9 +9,12 @@
             </tr>
             <tr>
                 <td>内容</td>
-                <td><textarea  name="content"> <%= post.title%></textarea></td>
+                <td><textarea  name="content"> <%= post.content%></textarea></td>
             </tr>
-
+            <tr>
+                <td>标签</td>
+                <td><input name="tags" value="<%= post.tags%>"></td>
+            </tr>
             <tr>
             <td>
                 <button class="btn btn-primary"> 编辑</button>

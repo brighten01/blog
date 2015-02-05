@@ -2,36 +2,25 @@
 
     <div class="container">
             <h2>发布列表</h2>
-        <table class="table-hover">
+        <table class="table table-hovered">
             <thead>
             <tr>
                 <th>标题</th>
                 <th>内容</th>
                 <th>发布时间</th>
-                <th>发布人</th>
-                <th>操作</th>
+                <th>标签</th>
+
             </tr>
             </thead>
             <tbody>
+            <%posts.forEach(function (post,index){%>
             <tr>
-                <td>博客标题</td>
+                <td><%= post.title%></td>
+                <td><%= post.content%></td>
+                <td><%= post.time%></td>
+                <td><%= post.tags%></td>
             </tr>
-            <tr>
-                <td>内容</td>
-            </tr>
-            <tr>
-                <td>发布时间</td>
-            </tr>
-
-            <tr>
-                <td>博客标题</td>
-            </tr>
-            <tr>
-                <td>
-                    <a href="" class="btn btn-primary">修改</a>
-                    <a href="" class="btn btn-primary">删除</a>
-                </td>
-            </tr>
+            <%});%>
             </tbody>
 
         </table>

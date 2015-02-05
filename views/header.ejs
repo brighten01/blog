@@ -10,13 +10,14 @@
 <body>
 <div class="container">
 <nav>
-    <a title="主页">主页</a>
     <% if (user) {%>
-        <a class="btn btn-primary" href="/post" target="_blank">发布博客</a>
-        <a class="btn btn-primary" href="/logout"  >退出</a>
+        <a> 您好，<%= user.name%> </a>
+         <a title="主页">主页</a>
+        <a class="btn btn-primary" href="/post" >发布博客</a>
+        <a class="btn btn-primary" href="/logout" >退出</a>
     <%}else{%>
-    <a class="btn btn-primary" href="/login" target="_blank">登录</a>
-    <a class="btn btn-primary" href="/reg" target="_blank">注册</a>
+    <a class="btn btn-primary" href="/login" >登录</a>
+    <a class="btn btn-primary" href="/reg" >注册</a>
     <% }%>
 </nav>
 </div>
