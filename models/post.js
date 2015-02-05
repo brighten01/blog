@@ -11,7 +11,7 @@ Post.prototype.save =function (callback){
         name: this.name,
         title :this.title,
         content:this.content,
-        time:"2131231312"
+        time: new Date().getTime()
     };
     //
     mongodb.close();

@@ -46,7 +46,7 @@ User.prototype.save =function (callback){
  * @param callback 回调函数
  */
 User.prototype.get =function (name,callback){
-
+    mongodb.close();
     mongodb.open(function (err,db){
         if(err) {
             return callback(err);

@@ -63,21 +63,17 @@ module.exports = function (app) {
         }
         // 更新密码结果
         password = md5.update(password).digest("hex");
-
-        var newUser = new User(
-            {
-                name: username,
-                email: email,
-                password: password
-            }
-        );
-        newUser.get(newUser.name, function (error, user) {
+        //修改初始化的User
+        User.name = username;
+        User.email = email;
+        User.password = password;
+        User.get(User.name, function (error, user) {
             if (user) {
                 req.flash("error", "用户名已经存在");
                 console.log("错误，您注册的用户名已经存在");
                 return res.redirect("/reg");
             }
-            newUser.save(function (error, user) {
+            User.save(function (error, user) {
                 if (error) {
                     req.flash("error", "发生错误");
                     console.log("发生位置错误错误代码" + error);
@@ -95,8 +91,8 @@ module.exports = function (app) {
     app.get("/login", checkNotLogin);
     app.get("/login", function (req, res) {
         res.render("login", {
-            user: req.session.user,
             title: "主页",
+            user: req.session.user,
             success: req.flash('success').toString(),
             error: req.flash("error").toString()
         });
@@ -111,13 +107,9 @@ module.exports = function (app) {
         var md5 = crypto.createHash("md5");
         var password = req.body.password;
         password = md5.update(password).digest("hex");
-        var newUser = new User(
-            {
-                name: req.body.name,
-                password: password
-            }
-        );
-        newUser.get(req.body.name, function (error, user) {
+        User.name = req.body.name;
+        User.pasword = password;
+        User.get(req.body.name, function (error, user) {
             if (error) {
                 req.flash("error", error);
             }
@@ -143,7 +135,12 @@ module.exports = function (app) {
 
     app.get("/post", checkLogin);
     app.get("/post", function (req, res) {
-        res.render("post", {title: "发布博客"});
+        res.render("post", {
+            title: "发布博客",
+            user: req.session.user,
+            success: req.flash("success").toString(),
+            error: req.flash("error").toString()
+        });
     });
 
     app.post("/post", checkLogin);
@@ -153,8 +150,11 @@ module.exports = function (app) {
         var content = req.body.content;
         var title = req.body.title;
         var name = currentUser.name;
-        var newPost = new Post(name, title, content);
-        newPost.save(function (error) {
+        //var newPost = new Post(name, title, content);
+        Post.name = name;
+        Post.title = title;
+        Post.content = content;
+        Post.save(function (error) {
             if (error) {
                 req.flash("error", "未知错误" + error);
             }
@@ -167,26 +167,26 @@ module.exports = function (app) {
     /**
      * 获取用户发布的文章
      */
-    app.get("/u/:name",function (req,res){
+    app.get("/u/:name", function (req, res) {
         var name = req.params.name;
-        User.get(name,function (error,user){
-            if(!user){
-                req.flash("error","此用户不存在");
+        User.get(name, function (error, user) {
+            if (!user) {
+                req.flash("error", "此用户不存在");
                 return res.redirect("/");
             }
 
-            Post.getAll(name,function (error,docs){
-                if(error){
-                    req.flash("error","未知错误"+error);
+            Post.getAll(name, function (error, docs) {
+                if (error) {
+                    req.flash("error", "未知错误" + error);
                     res.redirect("/");
                 }
                 res.render("index",
                     {
-                        user:"test",
+                        user: "test",
                         title: "我发布的文章",
                         success: req.flash("success").toString(),
-                        posts:docs,
-                        error:req.flash("error").toString()
+                        posts: docs,
+                        error: req.flash("error").toString()
                     });
             });
         });
@@ -195,29 +195,29 @@ module.exports = function (app) {
     /**
      * 查找文章 根据作者和文章标题
      */
-    app.get("/u/:name/:title",function (req,res){
+    app.get("/u/:name/:title", function (req, res) {
         var name = req.params.name;
-        var title =req.params.title;
+        var title = req.params.title;
 
-        User.get(name,function (error,user){
-            if(!user){
-                req.flash("error","无此用户");
+        User.get(name, function (error, user) {
+            if (!user) {
+                req.flash("error", "无此用户");
                 return res.render("/");
             }
-            Post.getOne(name,title ,function (error,post){
-                if(error){
-                    req.flash("error","错误");
+            Post.getOne(name, title, function (error, post) {
+                if (error) {
+                    req.flash("error", "错误");
                     return res.render('/');
                 }
-                    
+
                 res.render("article",
                     {
-                        title:title,
-                        name:name,
+                        title: title,
+                        name: name,
                         user: req.session.user,
-                        success:req.flash("success").toString(),
-                        error:req.flash("error").toString(),
-                        post:post
+                        success: req.flash("success").toString(),
+                        error: req.flash("error").toString(),
+                        post: post
 
                     }
                 );
