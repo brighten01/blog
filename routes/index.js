@@ -167,6 +167,7 @@ module.exports = function (app) {
     /**
      * 获取用户发布的文章
      */
+    app.get("/u/:name",checkLogin);
     app.get("/u/:name", function (req, res) {
         var name = req.params.name;
         User.get(name, function (error, user) {
@@ -222,6 +223,69 @@ module.exports = function (app) {
                     }
                 );
             })
+        });
+    });
+
+    //验证登录
+    app.get("/edit/:name/:title",checkLogin);
+    app.get("/edit/:name/:title",function (req,res){
+        var name = req.params.name;
+        var title = req.params.title;
+        User.get(name,function (error ,user){
+            if(!user){
+                req.flash("error","此用户不存在");
+                return res.redirect("/");
+            }
+
+            Post.edit(name,title ,function (error,doc){
+                if(error){
+                    req.flash("error","未知错误");
+                    return res.redirect("/");
+                }
+                res.render("edit",
+                    {
+                        title:"编辑博客",
+                        post:doc,
+                        user:req.session.user,
+                        success:req.flash("success").toString(),
+                        error:req.flash("error").toString()
+                    }
+                );
+            });
+        });
+    });
+
+    /**
+     *修改页面
+     */
+    app.post("/edit/:name/:title",checkLogin);
+    app.post("/edit/:name/:title",function (req,res){
+        var title = req.body.title;
+        var content = req.body.content;
+        console.log("标题"+title);
+        Post.update(title , content , function (error){
+            if(error){
+                req.flash("修改文章发生错误"+error);
+                return res.redirect("/");
+            }
+            req.flash("success","修改成功");
+            return res.redirect("/");
+        });
+
+    });
+
+    //验证登录
+    app.get("/delete/:name/:title",checkLogin);
+    app.get("/delete/:name/:title",function (req,res){
+        var name = req.params.name;
+        var title = req.params.title;
+        Post.remove(name,title,function (error){
+            if(error){
+                req.flash("error","删除错误");
+                return res.redirect("/");
+            }
+            req.flash("success","删除成功");
+            res.redirect("/");
         });
     });
     /**

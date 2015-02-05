@@ -19,8 +19,8 @@
             <td><%= post.content%></td>
             <td><%= post.time%></td>
             <td>
-                <a href="" class="btn btn-primary" target="_blanck"> 修改</a>
-                <a href="" class="btn btn-primary">删除</a>
+                <a href="/edit/<%= post.name%>/<%= post.title%>" class="btn btn-primary" target="_blank" > 修改</a>
+                <a href="/delete/<%=post.name%>/<%= post.title%>" class="btn btn-primary">删除</a>
             </td>
         </tr>
     <% })%>
