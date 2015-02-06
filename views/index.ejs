@@ -21,6 +21,28 @@
             <td>
                 <a href="/edit/<%= post.name%>/<%= post.title%>" class="btn btn-primary" target="_blank" > 修改</a>
                 <a href="/delete/<%=post.name%>/<%= post.title%>" class="btn btn-primary">删除</a>
+                <% var flag=1 %>
+                <% if(user && (user.name!=post.name) && (post.reprint_info!=undefined)) {%>
+                <%if ((post.reprint_info.reprint_from!=undefined) && (user.name !=post.reprint_info.reprint_from.name)  ){%>
+                    <% flag = 0 %>
+                <%}%>
+
+                <% if(post.reprint_info.reprint_to!=undefined){%>
+                        <% post.reprint_info.reprint_to.forEach(function (reprint_t , index){%>
+                            <% if(reprint_t.name ==user.name){%>
+                                    <% flag =0 %>
+                            <%}%>
+                        <%})%>
+                <%}%>
+
+               <%}else {%>
+               <% flag = 1%>
+               <%}%>
+               <% if (flag) { %>
+                <span>
+                    <a class="btn btn-primary" href="/reprint/<%= post.name%>/<%= post.title%>">转载</a>
+                </span>
+               <%}%>
             </td>
         </tr>
     <% })%>

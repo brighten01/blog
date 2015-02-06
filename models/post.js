@@ -1,6 +1,6 @@
 var mongodb = require("./db");
 var markdown = require("markdown").markdown;
-function Post(name, title, content,tags) {
+function Post(name, title, content, tags) {
     this.name = name;
     this.title = title;
     this.content = content;
@@ -14,8 +14,12 @@ Post.prototype.save = function (callback) {
         title: this.title,
         content: this.content,
         time: new Date().getTime(),
-        tags : this.tags,
-        comments:[]
+        tags: this.tags,
+        comments: [],
+        reprint_info: {
+            reprint_from:{},
+            reprint_to:[]
+        }
     };
     //
     mongodb.close();
@@ -87,8 +91,17 @@ Post.prototype.getOne = function (name, title, callback) {
                         callback(error);
                     }
                     //doc.content = markdown.toHTML(comment.content);
-                    if(doc){
-                        doc.comments.forEach(function (comment){
+
+                    if (doc) {
+                        collection.update(
+                            {"name": name, "title": title},
+                            {$inc: {"pv": 1}}, function (error) {
+                                mongodb.close();
+                                if (error) {
+                                    return callback(error);
+                                }
+                            });
+                        doc.comments.forEach(function (comment) {
                             comment.content = markdown.toHTML(comment.content);
                         });
                     }
@@ -122,6 +135,7 @@ Post.prototype.getAll = function (name, callback) {
                     mongodb.close();
                     return callback(err);
                 }
+
                 callback(null, docs);
             });
         });
@@ -159,7 +173,7 @@ Post.prototype.edit = function (name, title, callback) {
  * @param content  内 容
  * @param callback 回调函数
  */
-Post.prototype.update = function (name ,title, content, callback) {
+Post.prototype.update = function (name, title, content, callback) {
     mongodb.close();
     mongodb.open(function (error, db) {
         if (error) {
@@ -172,15 +186,15 @@ Post.prototype.update = function (name ,title, content, callback) {
                 callback(error);
             }
             collection.update(
-            {
-                 "name":name,
-                 "title": title
-            }, {$set: {"content": content,"title":title}}, function (error) {
-                if (error) {
-                   return  callback(error);
-                }
-                callback(null);
-            });
+                {
+                    "name": name,
+                    "title": title
+                }, {$set: {"content": content, "title": title}}, function (error) {
+                    if (error) {
+                        return callback(error);
+                    }
+                    callback(null);
+                });
 
         });
     });
@@ -192,21 +206,53 @@ Post.prototype.update = function (name ,title, content, callback) {
  * @param title
  * @param callback
  */
-Post.prototype.remove=function (name,title,callback){
+Post.prototype.remove = function (name, title, callback) {
     mongodb.close();
-    mongodb.open(function (err,db){
-        if(err){
+    mongodb.open(function (err, db) {
+        if (err) {
             return callback(err);
         }
-        db.collection("posts",function(err,collection){
-            if(err){
+        db.collection("posts", function (err, collection) {
+            if (err) {
                 callback(err);
             }
+            //删除对应文章的转载
+            collection.findOne({
+                name:name,
+                title:title
+            },function (error,doc){
+                if(error){
+                    return callback(error);
+                }
+
+                var reprint_from = "";
+                if(doc.reprint_info.reprint_from){
+                    reprint_from = doc.reprint_info.reprint_from;
+                }
+
+                if(reprint_from!=""){
+                    collection.update({
+                        "name":reprint_from.name,
+                        "title":reprint_from.title
+                    },{$pull:{
+                        "reprint_info.reprint_to":{
+                        "name":name,
+                         "title":title
+                         }
+                      }},function (error){
+                          if(error){
+                              mongodb.close();
+                             return callback(error);
+                          }
+                       });
+                }
+            });
+
             collection.remove({
-                "name":name,
-                "title":title
-            },function (err){
-                if(err){
+                "name": name,
+                "title": title
+            }, function (err) {
+                if (err) {
                     callback(err);
                 }
                 callback(null);
@@ -219,22 +265,78 @@ Post.prototype.remove=function (name,title,callback){
  * @param tags  标签的名称目前只支持一个
  * @param callback  回调函数
  */
-Post.prototype.getTag = function (tags,callback){
+Post.prototype.getTag = function (tags, callback) {
     mongodb.close();
-    mongodb.open(function(error,db){
-        if(error){
+    mongodb.open(function (error, db) {
+        if (error) {
             mongodb.close();
             return callback(error);
         }
-        db.collection("posts",function (error,collection){
-            collection.find({tags:tags}).sort({time:-1}).toArray(function (error,docs){
-                if(error){
+        db.collection("posts", function (error, collection) {
+            collection.find({tags: tags}).sort({time: -1}).toArray(function (error, docs) {
+                if (error) {
                     callback(error);
                 }
-                callback(null,docs);
+                callback(null, docs);
             });
         });
     });
 
-}
+};
+
+/**
+ *
+ * @param reprint_from 转载的元文章
+ * @param reprint_to  转载之后的文章
+ * @param callback  回调转载函数
+ */
+Post.prototype.reprint = function (reprint_from, reprint_to, callback) {
+
+    mongodb.close();
+    mongodb.open(function (error, db) {
+        if (error) {
+            mongodb.close();
+            return callback(error);
+        }
+        db.collection("posts", function (error, collection) {
+            collection.findOne({
+                "name": reprint_from.name,
+                "title": reprint_from.title
+            }, function (error, post) {
+                if (error) {
+                    return callback(error);
+                }
+                //删除唯一标识 转载产生一条新的数据
+                delete post._id;
+
+                post.name = reprint_to.name;
+                post.title = (post.title.search(/[转载]/) > -1) ? post.title : "[转载]" + post.title;
+                post.comment = [];
+                post.reprint_info = {"reprint_from": reprint_from};
+                post.pv = 0;
+
+                //更新原有数据 reprint_to 意义为被转载之后的数据  rerpint_to 设计为数组 所有的被转载记录记录到这个数组里
+                collection.update({
+                    "name":reprint_from.name,
+                    "title":reprint_from.title
+                },{$push:{"reprint_info.reprint_to":{"title":post.title,"name":post.name}}},function (error){
+                    if(error){
+                        return callback(error);
+                    }
+
+
+                    //生成一条转载后的数据  将数据的来源写入到reprint_from 中 reprint_from 永远为一维数组
+                    collection.insert(post,{safe:true},function (error,doc){
+                        if(error){
+                            return callback(error);
+                        }
+                        callback(null,doc[0]);
+                    });
+                });
+                //这里取消回调
+                //callback(null, post);
+            });
+        });
+    });
+};
 module.exports = new Post("test", "tset", "test");

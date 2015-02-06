@@ -18,6 +18,7 @@ module.exports = function (app) {
     //默认主页路由
     app.get("/", function (req, res) {
         Post.get(null, function (error, posts) {
+
             if (error) {
                 posts = [];
             }
@@ -204,12 +205,13 @@ module.exports = function (app) {
         User.get(name, function (error, user) {
             if (!user) {
                 req.flash("error", "无此用户");
-                return res.render("/");
+                //return res.redirect('/nswd');
+                return res.redirect("/");
             }
             Post.getOne(name, title, function (error, post) {
                 if (error) {
                     req.flash("error", "错误");
-                    return res.render('/');
+                    return res.redirect('/nswd');
                 }
 
                 res.render("article",
@@ -229,25 +231,25 @@ module.exports = function (app) {
 
 
     //验证登录
-    app.post("/u/:name/:title",checkLogin);
-    app.post("/u/:name/:title" ,function (req,res){
+    app.post("/u/:name/:title", checkLogin);
+    app.post("/u/:name/:title", function (req, res) {
 
         var comment = {
-            name:req.body.name,
-            title:req.body.title,
-            website : req.body.website,
-            time:new Date().getTime(),
+            name: req.body.name,
+            title: req.body.title,
+            website: req.body.website,
+            time: new Date().getTime(),
             content: req.body.content
         };
 
-        var newComment = new Comment(req.params.name,req.params.title,comment);
-        newComment.save(function (error){
-            if(error){
-                req.flash("error","出现错误"+error);
+        var newComment = new Comment(req.params.name, req.params.title, comment);
+        newComment.save(function (error) {
+            if (error) {
+                req.flash("error", "出现错误" + error);
                 return res.redirect("/");
             }
 
-            req.flash("success","发表评论成功");
+            req.flash("success", "发表评论成功");
             res.redirect('back');
         });
     });
@@ -292,13 +294,13 @@ module.exports = function (app) {
         var comment_content = req.body.comment;
         var currentUser = req.session.user;
         var comment_name = currentUser.name;
-        var newComment = new Comment(comment_name,comment_title,comment_content);
-        newComment.save(function (error){
-            if(error){
+        var newComment = new Comment(comment_name, comment_title, comment_content);
+        newComment.save(function (error) {
+            if (error) {
                 req.flash("发布评论失败");
                 return res.redirect("/");
             }
-            req.flash("success","发布评论成功");
+            req.flash("success", "发布评论成功");
             res.redirect("/");
         });
         Post.update(name, title, content, function (error) {
@@ -327,24 +329,42 @@ module.exports = function (app) {
         });
     });
 
-    app.get("/tags/:tags",function (req,res){
-        var tags  = req.params.tags;
-        Post.getTag(tags,function (error,docs){
-            if(error){
-                req.flash("error","发生错误");
+    app.get("/tags/:tags", function (req, res) {
+        var tags = req.params.tags;
+        Post.getTag(tags, function (error, docs) {
+            if (error) {
+                req.flash("error", "发生错误");
                 res.redirect("/");
             }
 
             res.render("list",
                 {
-                    user:req.session.user,
-                    title:"标签查找",
-                    success:req.flash("success").toString(),
-                    error:req.flash("error").toString(),
-                    posts:docs
+                    user: req.session.user,
+                    title: "标签查找",
+                    success: req.flash("success").toString(),
+                    error: req.flash("error").toString(),
+                    posts: docs
                 });
         });
 
+    });
+
+    //博客转载功能
+    app.get("/reprint/:name/:title", checkLogin);
+    app.get("/reprint/:name/:title", function (req, res) {
+        Post.edit(req.params.name, req.params.title, function (error, post) {
+            var currentUser = req.session.user;
+            var reprint_from = {name: post.name, time: post.time, title: post.title};
+            var reprint_to = {name: currentUser.name};
+            Post.reprint(reprint_from, reprint_to, function (error, post) {
+                if (error) {
+                    req.flash("error", "出现错误" + error);
+                }
+                req.flash("success", "转载成功");
+                var url = "/u/" + post.name + "/" + post.title;
+                res.redirect(url);
+            });
+        });
     });
     /**
      *  验证用户登录
@@ -373,5 +393,9 @@ module.exports = function (app) {
         }
         next();
     }
+
+    app.use(function (req, res) {
+        res.render("404");
+    });
 
 }
